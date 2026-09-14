@@ -42,11 +42,9 @@ Your Dev Spaces workspace includes a Claude AI coding agent connected to this re
 
 ### Starting the agent
 
-Click **Start Claude AI** in the Dev Spaces command panel, or run:
+Click **Start Claude AI** in the Dev Spaces command panel (left sidebar → ▶ Run).
 
-```bash
-python3.11 claude-client/client.py chat
-```
+> Or from the terminal: `python3.11 claude-client/client.py chat`
 
 The agent will:
 1. Register you automatically using your workspace username
