@@ -1,0 +1,8 @@
+site_name: Python Microservices Sample App
+site_description: Python Microservices Sample App
+
+nav:
+  - Overview: index.md
+
+plugins:
+  - techdocs-core
