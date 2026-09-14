@@ -3,6 +3,7 @@ site_description: Python Microservices Sample App
 
 nav:
   - Overview: index.md
+  - Adding AI to Your Services: ai-integration.md
 
 plugins:
   - techdocs-core
