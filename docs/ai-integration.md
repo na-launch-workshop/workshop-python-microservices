@@ -1,53 +1,60 @@
-# Adding AI to Your Microservices
+# Phase 3 — Adding AI to Your Microservices
 
-This guide covers Phase 3 of the workshop — embedding AI directly into the microservice code so your services can call Claude programmatically.
+Embed AI directly into the microservice code so your services can call Claude programmatically — using the same gateway you've been chatting with.
 
 ## How it works
 
-The Claude AI gateway is already running on the cluster and holds the Anthropic API key. Your microservice calls the gateway's `/run` endpoint the same way the chat client does — send a prompt, get a text response back.
+The Claude AI gateway is already running on the cluster. Your microservice calls its `/run` endpoint — send a prompt, get a text response. No API keys in your code, no new infrastructure.
 
 ```
 User request → your microservice → Claude gateway → Anthropic API → response
 ```
 
-No API keys in your code. No new infrastructure. The gateway handles auth, rate limiting, and the API call.
+---
 
-## Prerequisites
+## Step 1 — Start the microservices
 
-- Your Dev Spaces workspace is open
-- You have registered with the Claude gateway (the chat client does this automatically)
-- Your token is stored at `~/.claude-token`
-
-## Start the microservices
-
-First get the services running in your Dev Spaces terminal:
+Open a terminal in Dev Spaces and get the services running:
 
 ```bash
-# Install dependencies
 pip install -r requirements.txt
-
-# Start all services locally
 ./start-local.sh
 ```
 
-Or with Docker Compose (Podman available in UDI):
+Services will be available at:
+
+| Service | URL |
+|---|---|
+| Gateway | http://localhost:8000 |
+| Users | http://localhost:8001 |
+| Products | http://localhost:8002 |
+| Inventory | http://localhost:8003 |
+| Orders | http://localhost:8004 |
+
+Dev Spaces exposes these ports automatically — check the Ports panel in VS Code if the browser doesn't open.
+
+---
+
+## Step 2 — Test the gateway from the terminal
+
+Before touching any service code, confirm the gateway responds:
 
 ```bash
-podman-compose up --build
+TOKEN=$(cat ~/.claude-token)
+
+curl -s -X POST http://claude-gateway.claude-sandbox.svc:8080/run \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Suggest 3 products for someone who ordered a laptop and a mouse"}'
 ```
 
-Services will be available at:
-- Gateway: `http://localhost:8000`
-- Users: `http://localhost:8001`
-- Products: `http://localhost:8002`
-- Inventory: `http://localhost:8003`
-- Orders: `http://localhost:8004`
+You should see a text response stream back. Once this works, the same call from Python code is identical.
 
-Dev Spaces automatically exposes these ports — click the port notification or find them under the Ports panel in VS Code.
+---
 
-## The pattern
+## Step 3 — Add the helper to a service
 
-Add this helper to any service:
+Add this to the service you want to enhance (e.g. `orders-service/main.py`):
 
 ```python
 import httpx
@@ -62,7 +69,6 @@ def _load_token() -> str:
     return open(os.path.expanduser("~/.claude-token")).read().strip()
 
 def ask_claude(prompt: str) -> str:
-    """Send a prompt to Claude and return the response text."""
     resp = httpx.post(
         f"{GATEWAY_URL}/run",
         headers={"Authorization": f"Bearer {_load_token()}"},
@@ -73,67 +79,61 @@ def ask_claude(prompt: str) -> str:
     return resp.text
 ```
 
-## Example — product recommendations
+---
 
-Add a `/recommend` endpoint to the orders service that suggests products based on a user's order history:
+## Step 4 — Add an AI-powered endpoint
+
+Use `ask_claude()` inside a new route. Example — product recommendations based on order history:
 
 ```python
-# orders-service/main.py
-
 @app.get("/orders/{user_id}/recommend")
 async def recommend(user_id: str, db: Session = Depends(get_db)):
-    # Fetch the user's order history from the database
     orders = db.query(Order).filter(Order.user_id == user_id).all()
-    order_summary = [
-        {"product": o.product_name, "quantity": o.quantity}
-        for o in orders
-    ]
+    order_summary = [{"product": o.product_name, "quantity": o.quantity} for o in orders]
 
     prompt = f"""
-    A customer has the following order history:
-    {order_summary}
-
-    Suggest 3 products they might like next. Be concise — one line per product.
+    A customer has the following order history: {order_summary}
+    Suggest 3 products they might like next. One line per product.
     """
 
-    recommendations = ask_claude(prompt)
-    return {"user_id": user_id, "recommendations": recommendations}
+    return {"user_id": user_id, "recommendations": ask_claude(prompt)}
 ```
 
-## Testing from Dev Spaces
+---
 
-Test the gateway call directly before wiring it into the service:
+## Step 5 — Test the new endpoint
 
 ```bash
-TOKEN=$(cat ~/.claude-token)
+# First create a user and some orders using the demo script
+./demo.sh
 
-curl -s -X POST http://claude-gateway.claude-sandbox.svc:8080/run \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "Suggest 3 products for someone who ordered a laptop and a mouse"}' \
-  | cat
+# Then call your new endpoint
+curl http://localhost:8000/orders/<user-id>/recommend
 ```
 
-Once that works, the same call in Python code works identically.
+---
 
-## Other ideas
+## Step 6 — Commit and push via the agent
 
-| Endpoint to add | Service | Prompt idea |
+Switch to the Claude chat and ask the agent to commit your changes:
+
+```
+Commit my changes with a clear message and push to GitLab
+```
+
+Then open an MR:
+
+```
+Open a draft MR for my AI integration changes
+```
+
+---
+
+## Other ideas to try
+
+| Endpoint | Service | What to ask Claude |
 |---|---|---|
 | `GET /products/{id}/description` | products | Generate a rich marketing description from name + price |
-| `POST /orders/validate` | orders | Check if an order looks fraudulent |
-| `GET /inventory/reorder-suggestion` | inventory | Suggest reorder quantities based on stock levels |
-| `GET /users/{id}/summary` | users | Summarise a user's activity in plain English |
-
-## Running in Dev Spaces vs locally
-
-The gateway URL `http://claude-gateway.claude-sandbox.svc:8080` only resolves inside the cluster. If you run docker-compose locally on your laptop, set the env var to point at a port-forward or accept that AI features only work in Dev Spaces.
-
-```bash
-# In Dev Spaces — works automatically
-CLAUDE_GATEWAY_URL=http://claude-gateway.claude-sandbox.svc:8080
-
-# Local testing — use oc port-forward first
-# oc port-forward svc/claude-gateway 8080:8080 -n claude-sandbox
-CLAUDE_GATEWAY_URL=http://localhost:8080
-```
+| `POST /orders/validate` | orders | Is this order suspicious? Flag potential fraud |
+| `GET /inventory/reorder-suggestion` | inventory | How much should we reorder based on current stock? |
+| `GET /users/{id}/summary` | users | Summarise this user's activity in plain English |
