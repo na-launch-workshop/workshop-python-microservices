@@ -1,6 +1,6 @@
 # 📓 Python Microservices Workshop
 
-A hands-on example of 5 Python microservices communicating over REST, with full CRUD operations and SQLite persistence — and an AI coding agent you can use to explore and modify the codebase.
+A hands-on example of 5 Python microservices communicating over REST, with full CRUD operations and SQLite persistence.
 
 ## Services
 
@@ -33,70 +33,6 @@ Gateway :8000          ← only port exposed publicly
 ```
 
 When you `POST /orders`, the Orders service makes HTTP calls to the other three services before writing the order — this is the cross-service communication pattern the workshop demonstrates.
-
----
-
-## 🤖 Claude AI Agent
-
-Your Dev Spaces workspace includes a Claude AI coding agent connected to this repository. It can read, edit, and commit code — running inside a sandboxed container on the cluster.
-
-### Starting the agent
-
-Click **Terminal** → **Run Task** → **Start Claude AI**.
-
-> Or from the terminal: `python3.11 claude-client/client.py chat`
-
-The agent will:
-1. Register you automatically using your workspace username
-2. Clone your fork of this repo into its sandbox
-3. Drop you into an interactive chat
-
-### How to interact
-
-Type your prompt and press **Enter twice** to submit. The agent streams its response as it works.
-
-```
-You: What does the orders service do?
-
-You: Add a /health endpoint to the gateway service and commit it
-
-You: Push my changes and open a draft MR
-```
-
-Type `/reset` to clear the conversation history, `/quit` to exit.
-
-### What the agent can do
-
-| Tool | What it does |
-|---|---|
-| `read_file` / `write_file` | Read and edit files in the sandbox |
-| `execute_code` | Run Python, Bash, or JavaScript to test changes |
-| `git_clone` | Clone your GitLab fork |
-| `git_commit` | Stage and commit changes |
-| `git_push` | Push to a session branch (`ai/<username>/<timestamp>`) |
-| `git_create_mr` | Open a draft Merge Request on GitLab |
-
-### Workflow
-
-```
-Dev Spaces (chat)
-      │
-      │  prompts
-      ▼
-Claude Agent (Kata sandbox)
-      │
-      ├── reads/edits files
-      ├── runs code to test
-      ├── git commit
-      └── git push → GitLab MR
-                          │
-                          ▼
-                   Dev Spaces (pull branch, review)
-```
-
-The agent always works on a session branch — it never touches `main`.
-
----
 
 ## Running with Docker Compose
 
@@ -178,12 +114,9 @@ curl -X POST http://localhost:8000/orders \
 ```
 workshop-python-microservices/
 ├── docker-compose.yml
-├── devfile.yaml            # Dev Spaces workspace config
 ├── requirements.txt
 ├── start-local.sh          # run all services locally
 ├── demo.sh                 # end-to-end walkthrough script
-├── claude-client/
-│   └── client.py           # Claude AI agent CLI
 ├── gateway/
 │   ├── Dockerfile
 │   └── main.py
@@ -208,4 +141,3 @@ workshop-python-microservices/
 - **SQLite** — embedded database, one file per service
 - **httpx** — HTTP client for cross-service calls
 - **Docker Compose** — local orchestration with health checks and named volumes
-- **Claude (Anthropic)** — AI coding agent via sandboxed gateway on OpenShift
