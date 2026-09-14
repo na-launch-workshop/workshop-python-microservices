@@ -3,8 +3,9 @@ site_description: Python Microservices Sample App
 
 nav:
   - Overview: index.md
-  - Adding AI to Your Services: ai-integration.md
-  - Security Demo (Instructor): devastator.md
+  - Phase 1 — Security Demo: devastator.md
+  - Phase 2 — Working with the Agent: phase-2-agent-workflow.md
+  - Phase 3 — Adding AI to Your Code: ai-integration.md
 
 plugins:
   - techdocs-core
