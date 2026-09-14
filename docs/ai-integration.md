@@ -18,6 +18,33 @@ No API keys in your code. No new infrastructure. The gateway handles auth, rate 
 - You have registered with the Claude gateway (the chat client does this automatically)
 - Your token is stored at `~/.claude-token`
 
+## Start the microservices
+
+First get the services running in your Dev Spaces terminal:
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Start all services locally
+./start-local.sh
+```
+
+Or with Docker Compose (Podman available in UDI):
+
+```bash
+podman-compose up --build
+```
+
+Services will be available at:
+- Gateway: `http://localhost:8000`
+- Users: `http://localhost:8001`
+- Products: `http://localhost:8002`
+- Inventory: `http://localhost:8003`
+- Orders: `http://localhost:8004`
+
+Dev Spaces automatically exposes these ports — click the port notification or find them under the Ports panel in VS Code.
+
 ## The pattern
 
 Add this helper to any service:
