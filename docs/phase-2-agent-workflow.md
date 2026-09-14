@@ -4,7 +4,7 @@ In this phase you use the Claude AI agent to explore, modify, and commit changes
 
 ## Start the agent
 
-Click **Start Claude AI** in the Dev Spaces command panel (left sidebar → ▶ Run).
+Click **Terminal** → **Run Task** → **Start Claude AI**.
 
 > Or from the terminal: `python3.11 claude-client/client.py chat`
 
