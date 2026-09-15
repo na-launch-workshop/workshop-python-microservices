@@ -1,6 +1,6 @@
 # Phase 3 — Adding AI to Your Microservices
 
-Embed AI directly into the microservice code so your services can call Claude programmatically — using the same gateway you've been chatting with.
+Use the Claude agent to write a new AI-powered feature directly into the microservices code. By the end of this phase you'll have a working endpoint that generates AI content from live database data.
 
 ## How it works
 
@@ -35,105 +35,92 @@ Dev Spaces exposes these ports automatically — check the Ports panel in VS Cod
 
 ---
 
-## Step 2 — Test the gateway from the terminal
+## Step 2 — Seed some data
 
-Before touching any service code, confirm the gateway responds:
-
-```bash
-TOKEN=$(cat ~/.claude-token)
-
-curl -s -X POST http://claude-gateway.claude-sandbox.svc:8080/run \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "Suggest 3 products for someone who ordered a laptop and a mouse"}'
-```
-
-You should see a text response stream back. Once this works, the same call from Python code is identical.
-
----
-
-## Step 3 — Add the helper to a service
-
-Add this to the service you want to enhance (e.g. `orders-service/main.py`):
-
-```python
-import httpx
-import os
-
-GATEWAY_URL = os.environ.get(
-    "CLAUDE_GATEWAY_URL",
-    "http://claude-gateway.claude-sandbox.svc:8080"
-)
-
-def _load_token() -> str:
-    return open(os.path.expanduser("~/.claude-token")).read().strip()
-
-def ask_claude(prompt: str) -> str:
-    resp = httpx.post(
-        f"{GATEWAY_URL}/run",
-        headers={"Authorization": f"Bearer {_load_token()}"},
-        json={"prompt": prompt},
-        timeout=120,
-    )
-    resp.raise_for_status()
-    return resp.text
-```
-
----
-
-## Step 4 — Add an AI-powered endpoint
-
-Use `ask_claude()` inside a new route. Example — product recommendations based on order history:
-
-```python
-@app.get("/orders/{user_id}/recommend")
-async def recommend(user_id: str, db: Session = Depends(get_db)):
-    orders = db.query(Order).filter(Order.user_id == user_id).all()
-    order_summary = [{"product": o.product_name, "quantity": o.quantity} for o in orders]
-
-    prompt = f"""
-    A customer has the following order history: {order_summary}
-    Suggest 3 products they might like next. One line per product.
-    """
-
-    return {"user_id": user_id, "recommendations": ask_claude(prompt)}
-```
-
----
-
-## Step 5 — Test the new endpoint
+Run the demo script to create users, products, inventory and a test order:
 
 ```bash
-# First create a user and some orders using the demo script
 ./demo.sh
+```
 
-# Then call your new endpoint
-curl http://localhost:8000/orders/<user-id>/recommend
+Keep the product ID printed by the script — you'll need it to test your new endpoint.
+
+---
+
+## Step 3 — Open the Claude agent
+
+Click **Terminal** → **Run Task** → **Start Claude AI**.
+
+> Or from the terminal: `python3.11 claude-client/client.py chat`
+
+---
+
+## Step 4 — Ask the agent to build the feature
+
+Paste this prompt exactly into the chat and press Enter twice:
+
+```
+Clone my GitLab repo workshop-python-microservices.
+
+Add a new endpoint GET /products/{product_id}/describe to the products service.
+It should:
+1. Fetch the product from the SQLite database by ID (return 404 if not found)
+2. Call the Claude AI gateway at http://claude-gateway.claude-sandbox.svc:8080/run
+   using the token from ~/.claude-token
+3. Ask Claude to write a 2-3 sentence marketing description for the product
+   based on its name and price
+4. Return a JSON response with the product data plus an "ai_description" field
+
+Also add httpx to the products-service requirements if it isn't there already.
+Test it by starting the service and calling the endpoint.
+Commit the working code.
+```
+
+Watch the agent read the existing code, implement the feature, run the service, test it, and commit — all without leaving the chat.
+
+---
+
+## Step 5 — Test the endpoint yourself
+
+Once the agent confirms it's working:
+
+```bash
+# Replace <product-id> with the ID from demo.sh output
+curl http://localhost:8002/products/<product-id>/describe
+```
+
+You should get back something like:
+
+```json
+{
+  "id": "abc-123",
+  "name": "Laptop",
+  "price": 1299.99,
+  "ai_description": "The Laptop is a high-performance computing solution perfect for professionals who demand reliability and speed. Priced competitively at $1,299.99, it offers exceptional value for developers and power users alike. Whether you're coding, designing, or multitasking, this machine delivers the performance you need."
+}
 ```
 
 ---
 
-## Step 6 — Commit and push via the agent
+## Step 6 — Push and open an MR
 
-Switch to the Claude chat and ask the agent to commit your changes:
-
-```
-Commit my changes with a clear message and push to GitLab
-```
-
-Then open an MR:
+In the chat:
 
 ```
-Open a draft MR for my AI integration changes
+Push my changes and open a draft MR
 ```
+
+The agent pushes to a session branch and returns the GitLab MR URL. Review the diff in GitLab, then pull the branch in Dev Spaces to test the full stack.
 
 ---
 
-## Other ideas to try
+## Other features to try
 
-| Endpoint | Service | What to ask Claude |
+Once you've done the exercise above, pick another:
+
+| Endpoint | Service | Prompt idea |
 |---|---|---|
-| `GET /products/{id}/description` | products | Generate a rich marketing description from name + price |
-| `POST /orders/validate` | orders | Is this order suspicious? Flag potential fraud |
-| `GET /inventory/reorder-suggestion` | inventory | How much should we reorder based on current stock? |
-| `GET /users/{id}/summary` | users | Summarise this user's activity in plain English |
+| `GET /orders/{user_id}/recommend` | orders | Suggest products based on a user's order history |
+| `POST /orders/validate` | orders | Detect suspicious or fraudulent orders |
+| `GET /inventory/reorder-suggestion` | inventory | Suggest reorder quantities based on stock levels |
+| `GET /users/{id}/summary` | users | Summarise a user's activity in plain English |
